@@ -16,9 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.util.Arrays;
-import java.util.function.Supplier;
-
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer;
 import org.springframework.beans.factory.support.BeanNameGenerator;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -27,6 +24,9 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.metrics.StartupStep;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+
+import java.util.Arrays;
+import java.util.function.Supplier;
 
 /**
  * Standalone application context, accepting <em>component classes</em> as input &mdash;
@@ -55,8 +55,16 @@ import org.springframework.util.Assert;
  */
 public class AnnotationConfigApplicationContext extends GenericApplicationContext implements AnnotationConfigRegistry {
 
+	/**
+	 * beanDefinition（Bean定义）读取器，主要作用用来读取被注解修饰的bean并解析注解信息
+	 * 它能解析的注解信息：@Conditional，@Scope、@Lazy、@Primary、@DependsOn、@Role、@Description
+	 */
 	private final AnnotatedBeanDefinitionReader reader;
 
+	/**
+	 * 扫描器功能与上述BeanDefinitionReader类似，它可以扫描某个包路径，对扫描的类进行解析，如果扫描到类上边有@Component注解
+	 * 那么就会将该类解析为一个BeanDefinition
+	 */
 	private final ClassPathBeanDefinitionScanner scanner;
 
 
@@ -65,9 +73,28 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * through {@link #register} calls and then manually {@linkplain #refresh refreshed}.
 	 */
 	public AnnotationConfigApplicationContext() {
+		/**
+		 * TODO 会隐式调用父类GenericApplicationContext的构造方法，初始化DefaultListableBeanFactory
+		 * this.beanFactory = new DefaultListableBeanFactory();
+		 */
 		StartupStep createAnnotatedBeanDefReader = this.getApplicationStartup().start("spring.context.annotated-bean-reader.create");
+
+		/**
+		 * 初始化一个BeanDefinition读取器，Spring基础类
+		 * 主要做了两件事：
+		 * 1、初始化内置BeanPostProcess后置处理器
+		 * 2、初始化内置相关BeanDefinition
+		 */
 		this.reader = new AnnotatedBeanDefinitionReader(this);
 		createAnnotatedBeanDefReader.end();
+
+		/**
+		 * 初始化一个BeanDefinition扫描器，Spring基础类
+		 * spring默认的扫描包不是这个scanner对象
+		 * 而是自己new的一个ClassPathBeanDefinitionScanner
+		 * spring在执行工程后置处理器ConfigurationClassPostProcessor时，去扫描包时会new一个ClassPathBeanDefinitionScanner
+		 * 这里的scanner仅仅是为了程序员可以手动调用AnnotationConfigApplicationContext对象的scan方法
+		 */
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
 
@@ -86,10 +113,29 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * from the given component classes and automatically refreshing the context.
 	 * @param componentClasses one or more component classes &mdash; for example,
 	 * {@link Configuration @Configuration} classes
+	 *  根据参数类型可以知道，其实可以传入多个annotatedClasses，但是这种情况出现的比较少
 	 */
-	public AnnotationConfigApplicationContext(Class<?>... componentClasses) {
+	public AnnotationConfigApplicationContext(Class<?>...componentClasses){
+		/**
+		 * 调用构造函数
+		 * 首先会调用父类GenericApplicationContext的构造函数
+		 * 父类构造函数里边只做一件事：初始化BeanFactory：this.beanFactory = new DefaultListableBeanFactory()
+		 * 本类构造函数里边做了两件事：初始化BeanDefinition配置类读取器（AnnotatedBeanDefinitionReader reader）和一个扫描器（ClassPathBeanDefinitionScanner scanner）
+		 * scanner初始化之后用处不大，仅仅只会在外部手动调用 `.scan()`方法才会使用到这个对象，常规方式Spring用不到这个scanner对象，会重新new一个新的scanner对象
+		 */
 		this();
+		/**
+		 * 将传入的类进行注册
+		 * 这个配置类有两种情况，一种是传统意义上的带上@Configuration注解的配置类，还有一种是没有带上@Configuration，
+		 * 但是带有@Component，@Import，@ImportResouce，@Service，@ComponentScan等注解的配置类，在Spring内部把前者称为Full配置类，把后者称之为Lite配置类。
+		 * 有些地方也把Lite配置类称为普通Bean
+		 * 有两种情况：
+		 * 1、传入传统配置类（@Configuration修饰的类）
+		 * 2、传入普通类（一般不会这么做）
+		 * 注册配置类为BeanDefinition
+		 */
 		register(componentClasses);
+		//IOC容器刷新接口
 		refresh();
 	}
 
