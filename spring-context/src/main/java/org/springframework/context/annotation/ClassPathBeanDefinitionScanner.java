@@ -16,17 +16,10 @@
 
 package org.springframework.context.annotation;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
-import org.springframework.beans.factory.support.AbstractBeanDefinition;
-import org.springframework.beans.factory.support.BeanDefinitionDefaults;
-import org.springframework.beans.factory.support.BeanDefinitionReaderUtils;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.BeanNameGenerator;
+import org.springframework.beans.factory.support.*;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.EnvironmentCapable;
 import org.springframework.core.env.StandardEnvironment;
@@ -34,6 +27,9 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.PatternMatchUtils;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * A bean definition scanner that detects bean candidates on the classpath,
@@ -249,20 +245,35 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 
 
 	/**
-	 * Perform a scan within the specified base packages.
-	 * @param basePackages the packages to check for annotated classes
-	 * @return number of beans registered
+	 * 方法实现说明:真正的扫描我们@MapperScan的backpackage指定的路径的
+	 * Mapper包
+	 * @author:xsls
+	 * @param basePackages 包的路径
+	 * @return:
+	 * @exception:
+	 * @date:2019/8/21 17:15
 	 */
 	public int scan(String... basePackages) {
+
+		/**
+		 * 还没有扫描mapper包之前 容器中所有的bean定义个数
+		 */
 		int beanCountAtScanStart = this.registry.getBeanDefinitionCount();
 
+		/**
+		 * 真正的扫描我们的mapper包的mapper类
+		 * 此处调用的是子类的doScan因为被重写了
+		 */
 		doScan(basePackages);
 
-		// Register annotation config processors, if necessary.
+		// 注册系统中的配置类处理器
 		if (this.includeAnnotationConfig) {
 			AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 		}
 
+		/**
+		 * 返回扫描出mapper的bean定义的个数
+		 */
 		return (this.registry.getBeanDefinitionCount() - beanCountAtScanStart);
 	}
 
@@ -276,24 +287,61 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 */
 	protected Set<BeanDefinitionHolder> doScan(String... basePackages) {
 		Assert.notEmpty(basePackages, "At least one base package must be specified");
+
+		//创建bean定义的holder对象用于保存扫描后生成的bean定义对象
 		Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
+
+		//循环我们的包路径集合
 		for (String basePackage : basePackages) {
+
+			/**
+			 * 根据包名找到符合条件的BeanDefinition集合
+			 * 找到候选的Components
+			 */
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
 			for (BeanDefinition candidate : candidates) {
 				ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(candidate);
 				candidate.setScope(scopeMetadata.getScopeName());
+
+				//通过BeanName生成器设置我们的beanName
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
+
+				/**
+				 * 由findCandidateComponents内部可知，这里的candidate是ScannedGenericBeanDefinition
+				 * 而ScannedGenericBeanDefinition是AbstractBeanDefinition和AnnotatedBeanDefinition的子类
+				 * 所以下面的两个if都会进入
+				 */
 				if (candidate instanceof AbstractBeanDefinition) {
+					/**
+					 * 内部会设置BeanDefinition默认值
+					 * 处理BeanDefinition对象：例如：此Bean是否可以自动装配到其他Bean中
+					 */
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
+
+				/**
+				 * 如果是AnnotatedBeanDefinition，还会再设置一次值
+				 * 获取@Lazy @DependsOn @primary @Role @Description等注解的数据设置到BeanDefinition中
+				 */
 				if (candidate instanceof AnnotatedBeanDefinition) {
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
+
+				/**
+				 * 检查BeanName是否已经注册过，检查是否兼容
+				 * 把我们解析出来的组件bean定义注册到我们的IOC容器中
+				 */
 				if (checkCandidate(beanName, candidate)) {
+
+					/**将当前的BeanName和BeanDefinition封装成BeanDefinitionHolder对象*/
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
+
+					/**根据proxyMode的值，选择是否创建作用域代理*/
 					definitionHolder =
 							AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 					beanDefinitions.add(definitionHolder);
+
+					/**扫描结果注册BeanDefinition*/
 					registerBeanDefinition(definitionHolder, this.registry);
 				}
 			}

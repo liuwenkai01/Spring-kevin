@@ -16,12 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-
 import org.springframework.beans.factory.parsing.Location;
 import org.springframework.beans.factory.parsing.Problem;
 import org.springframework.beans.factory.parsing.ProblemReporter;
@@ -33,6 +27,8 @@ import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+
+import java.util.*;
 
 /**
  * Represents a user-defined {@link Configuration @Configuration} class.
@@ -48,23 +44,47 @@ import org.springframework.util.ClassUtils;
  */
 final class ConfigurationClass {
 
+	/**
+	 * 用了什么注解（注解元数据）
+	 */
 	private final AnnotationMetadata metadata;
 
+	/**
+	 * 对应哪个类（类资源）
+	 */
 	private final Resource resource;
 
+	/**
+	 * 类的名字
+	 */
 	@Nullable
 	private String beanName;
 
+	/**
+	 * 被哪个类注入的
+	 */
 	private final Set<ConfigurationClass> importedBy = new LinkedHashSet<>(1);
 
+	/**
+	 * 当前配置类中所有的@Bean method
+	 */
 	private final Set<BeanMethod> beanMethods = new LinkedHashSet<>();
 
+	/**
+	 * xml
+	 */
 	private final Map<String, Class<? extends BeanDefinitionReader>> importedResources =
 			new LinkedHashMap<>();
 
+	/**
+	 * 当前配置类，所有Import类中，类型为ImportBeanDefinitionRegistrar的对象
+	 */
 	private final Map<ImportBeanDefinitionRegistrar, AnnotationMetadata> importBeanDefinitionRegistrars =
 			new LinkedHashMap<>();
 
+	/**
+	 * 哪些类需要跳过，这个一般不会使用
+	 */
 	final Set<String> skippedBeanMethods = new HashSet<>();
 
 

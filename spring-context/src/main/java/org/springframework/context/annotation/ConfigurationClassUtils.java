@@ -16,14 +16,8 @@
 
 package org.springframework.context.annotation;
 
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.framework.AopInfrastructureBean;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -40,6 +34,11 @@ import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
+
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Utilities for identifying {@link Configuration} classes.
@@ -122,18 +121,25 @@ abstract class ConfigurationClassUtils {
 			}
 		}
 
+		//判断是否存在@Configuration注解
 		Map<String, Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
+
+		/**
+		 * 判断是不是真正的配置类 就是判断当前的bean的class上有没有标注了@Configuration注解
+		 */
 		if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
+			//设置了标记
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 		}
 		else if (config != null || isConfigurationCandidate(metadata)) {
+			//这里判断该配置类是一个非正式的配置类(Component ComponentScan Import ImportResource)
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
 		}
 		else {
 			return false;
 		}
 
-		// It's a full or lite configuration candidate... Let's determine the order value, if any.
+		//解析配置类上是否标注了@Order注解
 		Integer order = getOrder(metadata);
 		if (order != null) {
 			beanDef.setAttribute(ORDER_ATTRIBUTE, order);

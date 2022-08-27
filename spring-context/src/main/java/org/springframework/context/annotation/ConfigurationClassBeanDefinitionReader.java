@@ -16,17 +16,8 @@
 
 package org.springframework.context.annotation;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.factory.BeanDefinitionStoreException;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.annotation.AnnotatedGenericBeanDefinition;
@@ -35,13 +26,7 @@ import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader;
 import org.springframework.beans.factory.parsing.SourceExtractor;
-import org.springframework.beans.factory.support.AbstractBeanDefinition;
-import org.springframework.beans.factory.support.AbstractBeanDefinitionReader;
-import org.springframework.beans.factory.support.BeanDefinitionReader;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.BeanNameGenerator;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.beans.factory.support.*;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.context.annotation.ConfigurationCondition.ConfigurationPhase;
 import org.springframework.core.SpringProperties;
@@ -56,6 +41,9 @@ import org.springframework.core.type.StandardMethodMetadata;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import java.lang.reflect.Method;
+import java.util.*;
 
 /**
  * Reads a given fully-populated set of ConfigurationClass instances, registering bean
@@ -125,6 +113,8 @@ class ConfigurationClassBeanDefinitionReader {
 	 */
 	public void loadBeanDefinitions(Set<ConfigurationClass> configurationModel) {
 		TrackedConditionEvaluator trackedConditionEvaluator = new TrackedConditionEvaluator();
+
+		/**注册我们的配置类到容器中*/
 		for (ConfigurationClass configClass : configurationModel) {
 			loadBeanDefinitionsForConfigurationClass(configClass, trackedConditionEvaluator);
 		}
@@ -146,14 +136,33 @@ class ConfigurationClassBeanDefinitionReader {
 			return;
 		}
 
+		/**判断我们经过解析的是不是通过@Import导入进来的*/
 		if (configClass.isImported()) {
 			registerBeanDefinitionForImportedConfigurationClass(configClass);
 		}
+
+		/**是不是通过我们的@bean导入进来的组件*/
 		for (BeanMethod beanMethod : configClass.getBeanMethods()) {
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
 
+		/**是不是通过我们的@ImportResources导入进来的*/
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
+
+		/**是不是通过我们的ImportBeanDefinition注解导入进来的
+		 *
+		 * @import 导入ImportBeanDefinitionRegistrar类型的Bean也是在此注册Bean定义
+		 *
+		 * public class MyImportBeanDefinitionRegistrar implements ImportBeanDefinitionRegistrar {
+		 *     @Override
+		 *     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+		 *         GenericBeanDefinition beanDefinition=new GenericBeanDefinition();
+		 *         beanDefinition.setBeanClass(User.class);
+		 *         registry.registerBeanDefinition("user",beanDefinition);
+		 *     }
+		 * }
+		 *
+		 * */
 		loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());
 	}
 
@@ -161,16 +170,27 @@ class ConfigurationClassBeanDefinitionReader {
 	 * Register the {@link Configuration} class itself as a bean definition.
 	 */
 	private void registerBeanDefinitionForImportedConfigurationClass(ConfigurationClass configClass) {
+
+		/**获取我们的配置类的源信息*/
 		AnnotationMetadata metadata = configClass.getMetadata();
+
+		/**构建为我们的bean定义*/
 		AnnotatedGenericBeanDefinition configBeanDef = new AnnotatedGenericBeanDefinition(metadata);
 
+		/**设置他的scope*/
 		ScopeMetadata scopeMetadata = scopeMetadataResolver.resolveScopeMetadata(configBeanDef);
 		configBeanDef.setScope(scopeMetadata.getScopeName());
+
+		/**设置Bean名称*/
 		String configBeanName = this.importBeanNameGenerator.generateBeanName(configBeanDef, this.registry);
+
+		/**处理我们的JRS250组件的*/
 		AnnotationConfigUtils.processCommonDefinitionAnnotations(configBeanDef, metadata);
 
 		BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(configBeanDef, configBeanName);
 		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
+
+		/**注册我们的bean定义到我们的容器中*/
 		this.registry.registerBeanDefinition(definitionHolder.getBeanName(), definitionHolder.getBeanDefinition());
 		configClass.setBeanName(configBeanName);
 
@@ -234,7 +254,7 @@ class ConfigurationClassBeanDefinitionReader {
 			beanDef.setUniqueFactoryMethodName(methodName);
 		}
 		else {
-			// instance @Bean method
+			/**instance @Bean method  其实@Bean相当于使用xml方式的实例工厂方法实例化，所以这里设置工厂*/
 			beanDef.setFactoryBeanName(configClass.getBeanName());
 			beanDef.setUniqueFactoryMethodName(methodName);
 		}

@@ -80,7 +80,9 @@ final class PostProcessorRegistrationDelegate {
 		 * 并且强行把我们的bean工厂转为BeanDefinitionRegistry，因为待会需要注册Bean定义
 		 * BeanDefinitionRegistry registry = beanFactory
 		 */
-		if (beanFactory instanceof BeanDefinitionRegistry registry) {
+		if (beanFactory instanceof BeanDefinitionRegistry) {
+
+			BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
 
 			/**
 			 * 定义保存实现了BeanFactoryPostProcessor类型的后置处理器集合
@@ -109,8 +111,8 @@ final class PostProcessorRegistrationDelegate {
 				 *
 				 * 如果类型匹配则进行类型转换  BeanDefinitionRegistryPostProcessor registryProcessor = postProcessor
 				 */
-				if (postProcessor instanceof BeanDefinitionRegistryPostProcessor registryProcessor) {
-
+				if (postProcessor instanceof BeanDefinitionRegistryPostProcessor) {
+					BeanDefinitionRegistryPostProcessor registryProcessor = (BeanDefinitionRegistryPostProcessor) postProcessor;
 					//调用它作为BeanDefinitionRegistryPostProcessor的处理器的后置方法
 					registryProcessor.postProcessBeanDefinitionRegistry(registry);
 
@@ -276,6 +278,8 @@ final class PostProcessorRegistrationDelegate {
 			 * 上面的代码是执行BeanDefinitionRegistryPostProcessor类独有的方法
 			 * 这里需要再把父类BeanFactoryPostProcessor的方法也执行一次
 			 * 即：调用 BeanDefinitionRegistryPostProcessor.postProcessBeanFactory方法
+			 *
+			 * ConfigurationClassPostProcess.postProcessBeanFactory方法主要是对@Configuration做代理增强
 			 */
 			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
 

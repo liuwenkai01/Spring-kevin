@@ -568,6 +568,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				/**
 				 * 6、注册Bean后置处理器（注册BeanPostProcessor）
 				 * 将扫描到的BeanPostProcessors实例化并排序，并添加到BeanFactory的beanPostProcessors属性中去
+				 * 实例化和注册beanFactory中扩展了BeanPostProcessor的bean。
+				 * 例如：
+				 * AutowiredAnnotationBeanPostProcessor(处理被@Autowired注解修饰的bean并注入)
+				 * RequiredAnnotationBeanPostProcessor(处理被@Required注解修饰的方法)
+				 * CommonAnnotationBeanPostProcessor(处理@PreDestroy、@PostConstruct、@Resource等多个注解的作用)等。
 				 */
 				registerBeanPostProcessors(beanFactory);
 				beanPostProcess.end();
@@ -589,6 +594,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// Initialize other special beans in specific context subclasses.
 				/**
 				 * 9、这个方法同样也是留给子类实现的
+				 * 模板方法，在容器刷新的时候可以自定义逻辑，不同的Spring容器做不同的事情
 				 * springboot也是从这个方法进行启动tomcat的.
 				 */
 				onRefresh();
@@ -925,7 +931,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * initializing all remaining singleton beans.
 	 */
 	protected void finishBeanFactoryInitialization(ConfigurableListableBeanFactory beanFactory) {
-		// Initialize conversion service for this context.
+		// 为我们的bean工厂创建类型转化器  Convert
 		if (beanFactory.containsBean(CONVERSION_SERVICE_BEAN_NAME) &&
 				beanFactory.isTypeMatch(CONVERSION_SERVICE_BEAN_NAME, ConversionService.class)) {
 			beanFactory.setConversionService(
@@ -940,6 +946,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 
 		// Initialize LoadTimeWeaverAware beans early to allow for registering their transformers early.
+		// 处理关于aspectj
 		String[] weaverAwareNames = beanFactory.getBeanNamesForType(LoadTimeWeaverAware.class, false, false);
 		for (String weaverAwareName : weaverAwareNames) {
 			getBean(weaverAwareName);
@@ -949,9 +956,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.setTempClassLoader(null);
 
 		// Allow for caching all bean definition metadata, not expecting further changes.
+		//冻结所有的 bean 定义 ， 说明注册的 bean 定义将不被修改或任何进一步的处理
 		beanFactory.freezeConfiguration();
 
 		// Instantiate all remaining (non-lazy-init) singletons.
+		//实例化剩余的单实例bean
 		beanFactory.preInstantiateSingletons();
 	}
 

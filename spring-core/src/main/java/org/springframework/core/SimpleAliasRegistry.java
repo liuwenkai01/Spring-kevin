@@ -16,19 +16,18 @@
 
 package org.springframework.core;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.util.Assert;
+import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
+import org.springframework.util.StringValueResolver;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.springframework.util.Assert;
-import org.springframework.util.ObjectUtils;
-import org.springframework.util.StringUtils;
-import org.springframework.util.StringValueResolver;
 
 /**
  * Simple implementation of the {@link AliasRegistry} interface.
@@ -203,17 +202,29 @@ public class SimpleAliasRegistry implements AliasRegistry {
 	}
 
 	/**
-	 * Determine the raw name, resolving aliases to canonical names.
-	 * @param name the user-specified name
-	 * @return the transformed name
+	 * 解析bean 的别名
+	 * @param name bean传入的名称
+	 * @return 返回的名称
 	 */
 	public String canonicalName(String name) {
 		String canonicalName = name;
-		// Handle aliasing...
+		/**
+		 * 这里使用 while 循环进行处理，原因是：可能会存在多重别名的问题，即别名指向别名。比如下面
+		 * 的配置：
+		 *   <bean id="tulingDao" class="com.tuling.mapper.tulingDao"/>
+		 *   <alias name="tulingDao" alias="aliasA"/>
+		 *   <alias name="aliasA" alias="aliasB"/>
+		 *
+		 * 上面的别名指向关系为 aliasB -> aliasA -> tulingDao，对于上面的别名配置，aliasMap 中数据
+		 * 视图为：aliasMap = [<aliasB, aliasA>, <aliasA, tulingDao>]。通过下面的循环解析别名
+		 * aliasB 最终指向的 beanName
+		 */
 		String resolvedName;
 		do {
+			//获取bean的真实名称
 			resolvedName = this.aliasMap.get(canonicalName);
 			if (resolvedName != null) {
+				//赋值给 canonicalName属性
 				canonicalName = resolvedName;
 			}
 		}
