@@ -898,7 +898,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			 */
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
 
-				//是不是工厂bean
+				//是不是工厂（FactoryBean）bean
 				if (isFactoryBean(beanName)) {
 
 					// 是factoryBean会先生成实际的bean  &beanName 是用来获取实际bean的
