@@ -277,6 +277,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			 * 如果不是仅仅做类型检查，而是创建 Bean 对象，则需要调用 #markBeanAsCreated(String beanName) 方法，进行记录
 			 */
 			if (!typeCheckOnly) {
+				//将指定的 bean 标记为已创建（或即将创建）
 				markBeanAsCreated(beanName);
 			}
 

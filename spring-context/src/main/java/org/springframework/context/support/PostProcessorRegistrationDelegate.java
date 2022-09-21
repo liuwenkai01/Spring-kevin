@@ -55,10 +55,11 @@ final class PostProcessorRegistrationDelegate {
 	 *
 	 * 执行顺序顺序如下：
 	 * 1. 执行手动添加的BeanDefinitionRegistryPostProcessor                       的postProcessBeanDefinitionRegistry()方法
-	 * 2. 执行扫描出来的BeanDefinitionRegistryPostProcessor（实现了PriorityOrdered）的postProcessBeanDefinitionRegistry()方法
+	 * 2. 执行扫描出来的BeanDefinitionRegistryPostProcessor（实现了PriorityOrdered）的postProcessBeanDefinitionRegistry()方法  PS：此时就这ConfigurationClassPostProcessor一个后置处理器
 	 * 3. 执行扫描出来的BeanDefinitionRegistryPostProcessor（实现了Ordered）		   的postProcessBeanDefinitionRegistry()方法
 	 * 4. 执行扫描出来的BeanDefinitionRegistryPostProcessor（普通）				   的postProcessBeanDefinitionRegistry()方法
 	 * 5. 执行扫描出来的BeanDefinitionRegistryPostProcessor（所有）				   的postProcessBeanFactory()方法
+	 *
 	 * 6. 执行手动添加的BeanFactoryPostProcessor								   的postProcessBeanFactory()方法
 	 * 7. 执行扫描出来的BeanFactoryPostProcessor（实现了PriorityOrdered）		   的postProcessBeanFactory()方法
 	 * 8. 执行扫描出来的BeanFactoryPostProcessor（实现了Ordered）		   		   的postProcessBeanFactory()方法
@@ -175,7 +176,7 @@ final class PostProcessorRegistrationDelegate {
 			 * 可以理解为执行ConfigurationClassPostProcessor的postProcessBeanDefinitionRegistry()方法
 			 * 用于进行bean定义的加载 比如我们的包扫描，@Component @import  等等。。。。。。。。。
 			 * 调用此方法就完成了扫描@Component的Bean的操作
-			 * Spring热插播的体现，像ConfigurationClassPostProcessor就相当于一个组件，Spring很多事情就是交给组件去管理
+			 * Spring热插拔的体现，像ConfigurationClassPostProcessor就相当于一个组件，Spring很多事情就是交给组件去管理
 			 * 如果不想用这个组件，直接把注册组件的那一步去掉就可以
 			 */
 			invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry, beanFactory.getApplicationStartup());
@@ -385,6 +386,12 @@ final class PostProcessorRegistrationDelegate {
 	/**
 	 * 给我们容器中注册了我们bean的后置处理器
 	 * bean的后置处理器在什么时候进行调用？在bean的各个生命周期中都会进行调用
+	 * 1、注册BeanPostProcessorChecker的后置处理器
+	 * 2、注册扫描出来的BeanPostProcessor到BeanFactory.beanPostProcessors集合中（实现了PriorityOrdered接口的）
+	 * 3、注册扫描出来的BeanPostProcessor到BeanFactory.beanPostProcessors集合中（实现了Ordered接口的）
+	 * 4、注册扫描出来的BeanPostProcessor到BeanFactory.beanPostProcessors集合中（普通的没有实现任何排序接口的）
+	 * 5、注册扫描出来的BeanPostProcessor到BeanFactory.beanPostProcessors集合中（实现了MergedBeanDefinitionPostProcessor接口的后置处理器；bean 合并后的处理）
+	 * 6、注册ApplicationListenerDetector 应用监听器探测器的后置处理器
 	 * @param beanFactory
 	 * @param applicationContext
 	 */
@@ -441,7 +448,7 @@ final class PostProcessorRegistrationDelegate {
 		sortPostProcessors(priorityOrderedPostProcessors, beanFactory);
 		registerBeanPostProcessors(beanFactory, priorityOrderedPostProcessors);
 
-		// 处理实现Ordered的bean定义
+		// 处理实现Ordered的bean后置处理器
 		List<BeanPostProcessor> orderedPostProcessors = new ArrayList<>(orderedPostProcessorNames.size());
 		for (String ppName : orderedPostProcessorNames) {
 			//显示调用getBean方法

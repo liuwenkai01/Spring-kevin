@@ -586,7 +586,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 				// Initialize event multicaster for this context.
 				/**
-				 * 8、初始化时间多播器
+				 * 8、初始化事件多播器
 				 * 设置ApplicationContext的applicationEventMulticaster，要么是用户设置的，要么是SimpleApplicationEventMulticaster
 				 */
 				initApplicationEventMulticaster();
@@ -663,14 +663,25 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			}
 		}
 
-		// Initialize any placeholder property sources in the context environment.
+		/**
+		 *该方法在网上很多人说该方法没有用,因为这个方法是留个子类实现的,由于是对spring源码的核心
+		 * 设计理念没有弄清楚,正式由于spring提供了大量的可扩展的接口提供给我们自己来实现
+		 * 比如我们自己写一个类重写了initPropertySources方法，在该方法中设置了一个环境变量的值为A
+		 * 启动的时候，我的环境变量中没有该值就会启动抛出异常
+		 */
 		initPropertySources();
 
 		// Validate that all properties marked as required are resolvable:
 		// see ConfigurablePropertyResolver#setRequiredProperties
+		/**
+		 * 用来校验我们容器启动必须依赖的环境变量的值
+		 */
 		getEnvironment().validateRequiredProperties();
 
 		// Store pre-refresh ApplicationListeners...
+		/**
+		 * 创建一个早期事件监听器对象
+		 */
 		if (this.earlyApplicationListeners == null) {
 			this.earlyApplicationListeners = new LinkedHashSet<>(this.applicationListeners);
 		}
@@ -682,6 +693,12 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 		// Allow for the collection of early ApplicationEvents,
 		// to be published once the multicaster is available...
+		/**
+		 * 创建一个容器用于保存早期待发布的事件集合
+		 * 什么是早期事件?
+		 * 就是我们的事件监听器还没有注册到多播器上的时候都称为早期事件
+		 * 早期事件不需要手动publishEvent发布， 在registerListeners中会自动发布， 发布完早期事件就不存在了。
+		 */
 		this.earlyApplicationEvents = new LinkedHashSet<>();
 	}
 
@@ -726,8 +743,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
 
 		/**
-		 *
-		 * 忽略以下接口的bean的 接口函数方法。 在populateBean时
+		 * 忽略以下接口的bean的 接口函数方法。 在populateBean（属性赋值）时
 		 * 因为以下接口都有setXXX方法， 这些方法不特殊处理将会自动注入容器中的bean
 		 * 如果一个属性对应的set方法在ignoredDependencyInterfaces接口中被定义了，则该属性不会进行自动注入（是Spring中的自动注入，不是@Autowired）
 		 */
@@ -955,7 +971,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 		//在这里获取我们的早期事件
 		Set<ApplicationEvent> earlyEventsToProcess = this.earlyApplicationEvents;
-		// 在这里赋null。  也就是值此之后都将没有早期事件了
+		// 在这里赋null。  也就是自此之后都将没有早期事件了
 		this.earlyApplicationEvents = null;
 		if (!CollectionUtils.isEmpty(earlyEventsToProcess)) {
 			//通过多播器进行播发早期事件
@@ -971,6 +987,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	protected void finishBeanFactoryInitialization(ConfigurableListableBeanFactory beanFactory) {
 		// 为我们的bean工厂创建类型转化器  Convert
+		// 如果BeanFactory中存在名字叫conversionService的Bean,则设置为BeanFactory的conversionService属性
+		// ConversionService是用来进行类型转化的
 		if (beanFactory.containsBean(CONVERSION_SERVICE_BEAN_NAME) &&
 				beanFactory.isTypeMatch(CONVERSION_SERVICE_BEAN_NAME, ConversionService.class)) {
 			beanFactory.setConversionService(
@@ -980,6 +998,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// Register a default embedded value resolver if no BeanFactoryPostProcessor
 		// (such as a PropertySourcesPlaceholderConfigurer bean) registered any before:
 		// at this point, primarily for resolution in annotation attribute values.
+		// 设置默认的占位符解析器  ${xxx}  ---key
 		if (!beanFactory.hasEmbeddedValueResolver()) {
 			beanFactory.addEmbeddedValueResolver(strVal -> getEnvironment().resolvePlaceholders(strVal));
 		}
@@ -999,7 +1018,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.freezeConfiguration();
 
 		// Instantiate all remaining (non-lazy-init) singletons.
-		//实例化剩余的单实例bean
+		//实例化非懒加载的单实例bean
 		beanFactory.preInstantiateSingletons();
 	}
 
