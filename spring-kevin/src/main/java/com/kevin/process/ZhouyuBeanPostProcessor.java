@@ -10,7 +10,7 @@ public class ZhouyuBeanPostProcessor implements InstantiationAwareBeanPostProces
 	@Override
 	public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) throws BeansException {
 		if ("userService".equals(beanName)) {
-			System.out.println("实例化前");
+			System.out.println(beanName+"实例化前");
 		}
 		return null;
 	}

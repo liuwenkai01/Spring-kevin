@@ -3,7 +3,6 @@ package com.kevin;
 
 import com.kevin.config.KevinConfig;
 import com.kevin.service.Order;
-import com.kevin.service.OrderService;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.util.ClassUtils;
@@ -15,8 +14,10 @@ public class TestApplication {
 		System.out.println(ClassUtils.getDefaultClassLoader());
 		Order userService = (Order) applicationContext.getBean("order");
 		System.out.println(userService);
-		OrderService orderService = (OrderService) applicationContext.getBean("factoryService");
-		System.out.println(orderService);
+//		OrderService orderService = (OrderService) applicationContext.getBean("factoryService");
+//		System.out.println(orderService);
+
+		System.out.println(applicationContext.getBean("a"));
 	}
 
 }

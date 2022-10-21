@@ -163,11 +163,11 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	}
 
 	/**
-	 * 在网上很多很多写源码的大佬或者是<spring源码深度解析>一书上,也没有说清楚为啥要使用三级缓存(二级缓存可不可以能够
-	 * 解决) 答案是：可以, 但是没有很好的扩展性
+	 * 在网上很多很多写源码的大佬或者是<spring源码深度解析>一书上,也没有说清楚为啥要使用三级缓存(二级缓存可不可以能够解决)
+	 * 答案是：可以, 但是没有很好的扩展性
 	 * 为啥这么说.......
 	 * 原因: 获取三级缓存-----getEarlyBeanReference()经过一系列的后置处理来给我们早期对象进行特殊化处理
-	 * //从三级缓存中获取包装对象的时候 ，他会经过一次后置处理器的处理对我们早期对象的bean进行
+	 * 从三级缓存中获取包装对象的时候 ，他会经过一次后置处理器的处理对我们早期对象的bean进行
 	 * 特殊化处理，但是spring的原生后置处理器没有经过处理，而是留给了我们程序员进行扩展
 	 * singletonObject = singletonFactory.getObject();
 	 * 把三级缓存移植到二级缓存中
@@ -215,7 +215,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					if (singletonObject == null) {
 
 						/**
-						 * 再次尝试去二级缓存中获取对象(二级缓存中的对象是一个早期对象)
+						 * 再次尝试去二级缓存中获取对象期对象(二级缓存中的对象是一个早)
 						 * 何为早期对象:就是bean刚刚调用了构造方法，还来不及给bean的属性进行赋值的对象(纯净态)
 						 * 就是早期对象
 						 */
@@ -239,7 +239,12 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 								 */
 								singletonObject = singletonFactory.getObject();
 
-								//把早期对象放置在二级缓存,
+								//1、把早期对象放置在二级缓存,（为什么这里返回对象之后还需要放入到二级缓存？因为可能出现多次循环依赖
+								//      比如：A中有B和C两个属性，在创建B和C的时候都和A出现了循环依赖问题
+								//     A <==> B 循环依赖  A <==> C循环依赖，那么后边的循环依赖直接取二级缓存的Bean就可以了）
+								// 2、二级缓存   纯净态Bean (存储不完整的Bean用于解决循环依赖中多线程读取一级缓存的脏数据)
+								//     所以当有了三级缓存后，它还一定要存在，  因为它要存储的 aop创建的动态代理对象,  不可能重复创建
+								//3、在初始化之后需要在二级缓存中获取aop之后的动态代理对象；所以需要把三级缓存中得到的动态代理对象放入二级缓存中
 								this.earlySingletonObjects.put(beanName, singletonObject);
 
 								//ObjectFactory 包装对象从三级缓存中删除掉
@@ -471,10 +476,13 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * to be destroyed before the given bean is destroyed.
 	 * @param beanName the name of the bean
 	 * @param dependentBeanName the name of the dependent bean
+	 * 注册bean之间的依赖关系
 	 */
 	public void registerDependentBean(String beanName, String dependentBeanName) {
+		//获取原始的beanName
 		String canonicalName = canonicalName(beanName);
 
+		// 添加 <canonicalName, <dependentBeanName>> 到 dependentBeanMap 中
 		synchronized (this.dependentBeanMap) {
 			Set<String> dependentBeans =
 					this.dependentBeanMap.computeIfAbsent(canonicalName, k -> new LinkedHashSet<>(8));
@@ -483,6 +491,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 			}
 		}
 
+		// 添加 <dependentBeanName, <canonicalName>> 到 dependenciesForBeanMap 中
 		synchronized (this.dependenciesForBeanMap) {
 			Set<String> dependenciesForBean =
 					this.dependenciesForBeanMap.computeIfAbsent(dependentBeanName, k -> new LinkedHashSet<>(8));
@@ -504,22 +513,30 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	}
 
 	private boolean isDependent(String beanName, String dependentBeanName, @Nullable Set<String> alreadySeen) {
+		// alreadySeen 已经检测的依赖 bean
 		if (alreadySeen != null && alreadySeen.contains(beanName)) {
 			return false;
 		}
+		// 获取原始 beanName
 		String canonicalName = canonicalName(beanName);
+		//获取创建当前bean 所依赖的bean的名称集合
 		Set<String> dependentBeans = this.dependentBeanMap.get(canonicalName);
+		//不依赖任何前置Bean 直接返回
 		if (dependentBeans == null) {
 			return false;
 		}
+		// 存在，则证明存在已经注册的依赖
 		if (dependentBeans.contains(dependentBeanName)) {
 			return true;
 		}
+		// 递归检测依赖
 		for (String transitiveDependency : dependentBeans) {
 			if (alreadySeen == null) {
 				alreadySeen = new HashSet<>();
 			}
+			// 添加到 alreadySeen 中
 			alreadySeen.add(beanName);
+			//递归检查依赖
 			if (isDependent(transitiveDependency, dependentBeanName, alreadySeen)) {
 				return true;
 			}

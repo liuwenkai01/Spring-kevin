@@ -1,13 +1,14 @@
 package com.kevin.config;
 
-import com.kevin.service.Order;
-import com.kevin.service.User;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 @Configuration
-@ComponentScan("com.kevin")
+@ComponentScan("com.kevin.service")
+@EnableTransactionManagement
+@EnableAsync
 public class KevinConfig {
 
 //	@Bean
@@ -19,14 +20,14 @@ public class KevinConfig {
 //		return new UserService();
 //	}
 //
-	@Bean
-	public User user(){
-		return new User();
-	}
-
-	@Bean
-	public Order order(){
-		return new Order();
-	}
+//	@Bean(autowireCandidate = false)
+//	public User user1(){
+//		return new User();
+//	}
+//
+//	@Bean
+//	public Order order(){
+//		return new Order();
+//	}
 
 }

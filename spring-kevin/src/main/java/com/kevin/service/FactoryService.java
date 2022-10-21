@@ -4,15 +4,15 @@ import org.springframework.beans.factory.FactoryBean;
 import org.springframework.stereotype.Component;
 
 @Component
-public class FactoryService implements FactoryBean<OrderService> {
+public class FactoryService implements FactoryBean<FactoryTest> {
 
 	@Override
-	public OrderService getObject() throws Exception {
-		return new OrderService();
+	public FactoryTest getObject() throws Exception {
+		return new FactoryTest();
 	}
 
 	@Override
-	public Class<OrderService> getObjectType() {
-		return OrderService.class;
+	public Class<FactoryTest> getObjectType() {
+		return FactoryTest.class;
 	}
 }

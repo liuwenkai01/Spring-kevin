@@ -1,18 +1,30 @@
 package com.kevin.service;
 
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
 
-@Component
+@Service
 public class UserService {
 
-	private User user;
+	@Autowired
+	private OrderService orderService;
 
+	@Async
+	private void aa(){
 
-	public User getUser() {
-		return user;
 	}
 
-	public void setUser(User user) {
-		this.user = user;
-	}
+//	@Autowired
+//	@Qualifier
+//	private User user;
+//
+//
+//	public User getUser() {
+//		return user;
+//	}
+//
+//	public void setUser(User user) {
+//		this.user = user;
+//	}
 }
